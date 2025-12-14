@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Card, Chip, Button, FAB, ActivityIndicator, Divider } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -33,6 +34,8 @@ const AppointmentsScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               await dispatch(cancelAppointment(appointmentId)).unwrap();
+              // Refresh the appointments list immediately
+              await dispatch(fetchMyAppointments()).unwrap();
               Alert.alert('Success', 'Appointment cancelled successfully');
             } catch (error) {
               Alert.alert('Error', error || 'Failed to cancel appointment');
@@ -113,42 +116,47 @@ const AppointmentsScreen = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={appointments}
-        renderItem={renderAppointment}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Icon name="calendar-blank" size={64} color={theme.colors.disabled} />
-            <Text style={styles.emptyText}>No appointments yet</Text>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('Home', { screen: 'CounsellorList' })}
-              style={styles.emptyButton}
-            >
-              Book Appointment
-            </Button>
-          </View>
-        }
-      />
-      <FAB
-        style={styles.fab}
-        icon="plus"
-        onPress={() => navigation.navigate('Home', { screen: 'CounsellorList' })}
-      />
-    </View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        <FlatList
+          data={appointments}
+          renderItem={renderAppointment}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Icon name="calendar-blank" size={64} color={theme.colors.disabled} />
+              <Text style={styles.emptyText}>No appointments yet</Text>
+              <Button
+                mode="contained"
+                onPress={() => navigation.navigate('Home', { screen: 'CounsellorList' })}
+                style={styles.emptyButton}
+              >
+                Book Appointment
+              </Button>
+            </View>
+          }
+        />
+        <FAB
+          style={styles.fab}
+          icon="plus"
+          onPress={() => navigation.navigate('Home', { screen: 'CounsellorList' })}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  container: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

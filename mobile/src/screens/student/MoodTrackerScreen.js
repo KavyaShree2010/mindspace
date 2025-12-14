@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Card, Button, TextInput, Chip } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,6 +15,8 @@ const MoodTrackerScreen = () => {
   const [intensity, setIntensity] = useState(3);
   const [note, setNote] = useState('');
   const [selectedActivities, setSelectedActivities] = useState([]);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   const moodOptions = [
     { key: 'happy', label: 'Happy', emoji: '😊', color: '#4CAF50' },
@@ -29,6 +32,20 @@ const MoodTrackerScreen = () => {
     dispatch(fetchMoods());
     const now = new Date();
     dispatch(fetchMonthMoods({ year: now.getFullYear(), month: now.getMonth() + 1 }));
+    
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, [dispatch]);
 
   const handleLogMood = async () => {
@@ -62,145 +79,149 @@ const MoodTrackerScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text style={styles.sectionTitle}>How are you feeling today?</Text>
-          <View style={styles.moodOptions}>
-            {moodOptions.map((mood) => (
-              <TouchableOpacity
-                key={mood.key}
-                style={[
-                  styles.moodButton,
-                  selectedMood === mood.key && {
-                    backgroundColor: mood.color + '30',
-                    borderColor: mood.color,
-                    borderWidth: 2,
-                  },
-                ]}
-                onPress={() => setSelectedMood(mood.key)}
-              >
-                <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-                <Text style={styles.moodLabel}>{mood.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Card.Content>
-      </Card>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text style={styles.sectionTitle}>How are you feeling today?</Text>
+            <View style={styles.moodOptions}>
+              {moodOptions.map((mood) => (
+                <TouchableOpacity
+                  key={mood.key}
+                  style={[
+                    styles.moodButton,
+                    selectedMood === mood.key && {
+                      backgroundColor: mood.color + '30',
+                      borderColor: mood.color,
+                      borderWidth: 2,
+                    },
+                  ]}
+                  onPress={() => setSelectedMood(mood.key)}
+                >
+                  <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+                  <Text style={styles.moodLabel}>{mood.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Card.Content>
+        </Card>
 
-      {selectedMood && (
-        <>
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text style={styles.sectionTitle}>Intensity</Text>
-              <View style={styles.intensityContainer}>
-                {[1, 2, 3, 4, 5].map((level) => (
-                  <TouchableOpacity
-                    key={level}
-                    style={[
-                      styles.intensityButton,
-                      intensity === level && styles.intensityButtonActive,
-                    ]}
-                    onPress={() => setIntensity(level)}
-                  >
-                    <Text
+        {selectedMood && (
+          <>
+            <Card style={styles.card}>
+              <Card.Content>
+                <Text style={styles.sectionTitle}>Intensity</Text>
+                <View style={styles.intensityContainer}>
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <TouchableOpacity
+                      key={level}
                       style={[
-                        styles.intensityText,
-                        intensity === level && styles.intensityTextActive,
+                        styles.intensityButton,
+                        intensity === level && styles.intensityButtonActive,
                       ]}
+                      onPress={() => setIntensity(level)}
                     >
-                      {level}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Card.Content>
-          </Card>
+                      <Text
+                        style={[
+                          styles.intensityText,
+                          intensity === level && styles.intensityTextActive,
+                        ]}
+                      >
+                        {level}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </Card.Content>
+            </Card>
 
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text style={styles.sectionTitle}>Activities</Text>
-              <View style={styles.activitiesContainer}>
-                {activities.map((activity) => (
-                  <Chip
-                    key={activity}
-                    selected={selectedActivities.includes(activity)}
-                    onPress={() => toggleActivity(activity)}
-                    style={styles.activityChip}
-                  >
-                    {activity}
-                  </Chip>
-                ))}
-              </View>
-            </Card.Content>
-          </Card>
+            <Card style={styles.card}>
+              <Card.Content>
+                <Text style={styles.sectionTitle}>Activities</Text>
+                <View style={styles.activitiesContainer}>
+                  {activities.map((activity) => (
+                    <Chip
+                      key={activity}
+                      selected={selectedActivities.includes(activity)}
+                      onPress={() => toggleActivity(activity)}
+                      style={styles.activityChip}
+                    >
+                      {activity}
+                    </Chip>
+                  ))}
+                </View>
+              </Card.Content>
+            </Card>
 
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text style={styles.sectionTitle}>Note (Optional)</Text>
-              <TextInput
-                value={note}
-                onChangeText={setNote}
-                mode="outlined"
-                multiline
-                numberOfLines={3}
-                placeholder="Add any additional thoughts..."
-                style={styles.noteInput}
-              />
-            </Card.Content>
-          </Card>
+            <Card style={styles.card}>
+              <Card.Content>
+                <Text style={styles.sectionTitle}>Note (Optional)</Text>
+                <TextInput
+                  value={note}
+                  onChangeText={setNote}
+                  mode="outlined"
+                  multiline
+                  numberOfLines={3}
+                  placeholder="Add any additional thoughts..."
+                  style={styles.noteInput}
+                />
+              </Card.Content>
+            </Card>
 
-          <Button
-            mode="contained"
-            onPress={handleLogMood}
-            style={styles.logButton}
-          >
-            Log Mood
-          </Button>
-        </>
-      )}
+            <Button
+              mode="contained"
+              onPress={handleLogMood}
+              style={styles.logButton}
+            >
+              Log Mood
+            </Button>
+          </>
+        )}
 
-      <Card style={styles.card}>
-        <Card.Title title="Recent Moods" />
-        <Card.Content>
-          {(moods || []).slice(0, 7).map((mood) => (
-            <View key={mood._id} style={styles.moodEntry}>
-              <View style={styles.moodEntryLeft}>
-                <Text style={styles.moodEntryEmoji}>
-                  {moodOptions.find(m => m.key === mood.mood)?.emoji || '😐'}
-                </Text>
-                <View style={styles.moodEntryInfo}>
-                  <Text style={styles.moodEntryMood}>{mood.mood}</Text>
-                  <Text style={styles.moodEntryDate}>
-                    {new Date(mood.date).toLocaleDateString()}
+        <Card style={styles.card}>
+          <Card.Title title="Recent Moods" />
+          <Card.Content>
+            {(moods || []).slice(0, 7).map((mood) => (
+              <View key={mood._id} style={styles.moodEntry}>
+                <View style={styles.moodEntryLeft}>
+                  <Text style={styles.moodEntryEmoji}>
+                    {moodOptions.find(m => m.key === mood.mood)?.emoji || '😐'}
                   </Text>
+                  <View style={styles.moodEntryInfo}>
+                    <Text style={styles.moodEntryMood}>
+                      {moodOptions.find(m => m.key === mood.mood)?.label || mood.mood}
+                    </Text>
+                    <Text style={styles.moodEntryDate}>
+                      {new Date(mood.date).toLocaleDateString()}
+                    </Text>
+                  </View>
                 </View>
               </View>
-              <View style={styles.moodEntryIntensity}>
-                {Array.from({ length: mood.intensity }).map((_, i) => (
-                  <Icon
-                    key={i}
-                    name="circle"
-                    size={8}
-                    color={getMoodColor(mood.mood)}
-                  />
-                ))}
-              </View>
-            </View>
-          ))}
-        </Card.Content>
-      </Card>
-    </ScrollView>
+            ))}
+          </Card.Content>
+        </Card>
+        </ScrollView>
+      </Animated.View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
+  },
   card: {
-    margin: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
   sectionTitle: {
     fontSize: 16,
@@ -211,16 +232,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    rowGap: spacing.md,
   },
   moodButton: {
     width: '30%',
     aspectRatio: 1,
-    borderRadius: 12,
-    backgroundColor: theme.colors.surface,
+    borderRadius: 60,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.sm,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   moodEmoji: {
     fontSize: 32,
@@ -293,7 +318,6 @@ const styles = StyleSheet.create({
   moodEntryMood: {
     fontSize: 16,
     fontWeight: '600',
-    textTransform: 'capitalize',
   },
   moodEntryDate: {
     fontSize: 12,
@@ -302,7 +326,10 @@ const styles = StyleSheet.create({
   },
   moodEntryIntensity: {
     flexDirection: 'row',
-    gap: 4,
+    alignItems: 'center',
+  },
+  intensityDot: {
+    marginHorizontal: 2,
   },
 });
 

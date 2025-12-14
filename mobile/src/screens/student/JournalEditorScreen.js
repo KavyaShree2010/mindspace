@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { TextInput, Button, Chip } from 'react-native-paper';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, Dimensions, PanResponder } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { TextInput, Button, Chip, Text, SegmentedButtons } from 'react-native-paper';
 import { useDispatch } from 'react-redux';
+import Svg, { Path, Circle } from 'react-native-svg';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { createJournal, updateJournal } from '../../redux/slices/journalSlice';
 import { spacing, theme } from '../../constants/theme';
+
+const { width } = Dimensions.get('window');
 
 const JournalEditorScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
@@ -14,9 +19,14 @@ const JournalEditorScreen = ({ route, navigation }) => {
   const [mood, setMood] = useState(journal?.mood || '');
   const [tags, setTags] = useState(journal?.tags || []);
   const [isSaving, setIsSaving] = useState(false);
+  const [mode, setMode] = useState('text'); // 'text' or 'draw'
+  const [paths, setPaths] = useState([]);
+  const [currentPath, setCurrentPath] = useState('');
+  const [currentColor, setCurrentColor] = useState(theme.colors.primary);
 
   const moods = ['happy', 'calm', 'anxious', 'sad', 'neutral'];
   const commonTags = ['academic', 'social', 'achievement', 'stress', 'personal'];
+  const drawColors = [theme.colors.primary, theme.colors.secondary, '#000000', '#FF5252', '#4CAF50'];
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
@@ -59,91 +69,205 @@ const JournalEditorScreen = ({ route, navigation }) => {
     }
   };
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => mode === 'draw',
+      onMoveShouldSetPanResponder: () => mode === 'draw',
+      onPanResponderGrant: (evt) => {
+        const { locationX, locationY } = evt.nativeEvent;
+        setCurrentPath(`M${locationX},${locationY}`);
+      },
+      onPanResponderMove: (evt) => {
+        const { locationX, locationY } = evt.nativeEvent;
+        setCurrentPath((prevPath) => `${prevPath} L${locationX},${locationY}`);
+      },
+      onPanResponderRelease: () => {
+        if (currentPath) {
+          setPaths([...paths, { path: currentPath, color: currentColor }]);
+          setCurrentPath('');
+        }
+      },
+    })
+  ).current;
+
+  const clearDrawing = () => {
+    setPaths([]);
+    setCurrentPath('');
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <TextInput
-          label="Title"
-          value={title}
-          onChangeText={setTitle}
-          mode="outlined"
-          style={styles.input}
-          placeholder="Give your journal a title"
-        />
-
-        <TextInput
-          label="What's on your mind?"
-          value={content}
-          onChangeText={setContent}
-          mode="outlined"
-          multiline
-          numberOfLines={15}
-          style={[styles.input, styles.contentInput]}
-          placeholder="Write your thoughts here..."
-        />
-
-        <View style={styles.section}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.container}>
+        <View style={styles.content}>
           <TextInput
-            label="How are you feeling?"
-            value=""
-            editable={false}
+            label="Title"
+            value={title}
+            onChangeText={setTitle}
             mode="outlined"
-            style={styles.label}
+            style={styles.input}
+            placeholder="Give your journal a title"
           />
-          <View style={styles.moodContainer}>
-            {moods.map((m) => (
-              <Chip
-                key={m}
-                selected={mood === m}
-                onPress={() => setMood(m)}
-                style={styles.chip}
-              >
-                {m}
-              </Chip>
-            ))}
-          </View>
-        </View>
 
-        <View style={styles.section}>
-          <TextInput
-            label="Tags"
-            value=""
-            editable={false}
-            mode="outlined"
-            style={styles.label}
+          {/* Mode Switcher */}
+          <SegmentedButtons
+            value={mode}
+            onValueChange={setMode}
+            buttons={[
+              {
+                value: 'text',
+                label: 'Text',
+                icon: 'text',
+              },
+              {
+                value: 'draw',
+                label: 'Draw',
+                icon: 'pencil',
+              },
+            ]}
+            style={styles.modeSwitch}
           />
-          <View style={styles.tagsContainer}>
-            {commonTags.map((tag) => (
-              <Chip
-                key={tag}
-                selected={tags.includes(tag)}
-                onPress={() => toggleTag(tag)}
-                style={styles.chip}
-              >
-                {tag}
-              </Chip>
-            ))}
-          </View>
-        </View>
 
-        <Button
-          mode="contained"
-          onPress={handleSave}
-          loading={isSaving}
-          disabled={isSaving}
-          style={styles.saveButton}
-        >
-          {journal ? 'Update Journal' : 'Save Journal'}
-        </Button>
-      </View>
-    </ScrollView>
+          {mode === 'text' ? (
+            <TextInput
+              label="What's on your mind?"
+              value={content}
+              onChangeText={setContent}
+              mode="outlined"
+              multiline
+              numberOfLines={15}
+              style={[styles.input, styles.contentInput]}
+              placeholder="Write your thoughts here..."
+            />
+          ) : (
+            <View style={styles.drawingContainer}>
+              <View style={styles.drawingToolbar}>
+                <Text style={styles.toolbarLabel}>Colors:</Text>
+                <View style={styles.colorPicker}>
+                  {drawColors.map((color) => (
+                    <TouchableOpacity
+                      key={color}
+                      onPress={() => setCurrentColor(color)}
+                      style={[
+                        styles.colorButton,
+                        { backgroundColor: color },
+                        currentColor === color && styles.selectedColor,
+                      ]}
+                    />
+                  ))}
+                </View>
+                <Button
+                  mode="outlined"
+                  icon="eraser"
+                  onPress={clearDrawing}
+                  compact
+                  style={styles.clearButton}
+                >
+                  Clear
+                </Button>
+              </View>
+              <View
+                style={styles.canvas}
+                {...panResponder.panHandlers}
+              >
+                <Svg height="300" width={width - 48}>
+                  {paths.map((item, index) => (
+                    <Path
+                      key={index}
+                      d={item.path}
+                      stroke={item.color}
+                      strokeWidth={3}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ))}
+                  {currentPath && (
+                    <Path
+                      d={currentPath}
+                      stroke={currentColor}
+                      strokeWidth={3}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+                </Svg>
+                {paths.length === 0 && !currentPath && (
+                  <View style={styles.canvasPlaceholder}>
+                    <Icon name="gesture" size={48} color={theme.colors.placeholder} />
+                    <Text style={styles.canvasPlaceholderText}>Draw with your finger</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          <View style={styles.section}>
+            <TextInput
+              label="How are you feeling?"
+              value=""
+              editable={false}
+              mode="outlined"
+              style={styles.label}
+            />
+            <View style={styles.moodContainer}>
+              {moods.map((m) => (
+                <Chip
+                  key={m}
+                  selected={mood === m}
+                  onPress={() => setMood(m)}
+                  style={styles.chip}
+                >
+                  {m}
+                </Chip>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <TextInput
+              label="Tags"
+              value=""
+              editable={false}
+              mode="outlined"
+              style={styles.label}
+            />
+            <View style={styles.tagsContainer}>
+              {commonTags.map((tag) => (
+                <Chip
+                  key={tag}
+                  selected={tags.includes(tag)}
+                  onPress={() => toggleTag(tag)}
+                  style={styles.chip}
+                >
+                  {tag}
+                </Chip>
+              ))}
+            </View>
+          </View>
+
+          <Button
+            mode="contained"
+            onPress={handleSave}
+            loading={isSaving}
+            disabled={isSaving}
+            style={styles.saveButton}
+          >
+            {journal ? 'Update Journal' : 'Save Journal'}
+          </Button>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  container: {
+    flex: 1,
   },
   content: {
     padding: spacing.md,
@@ -155,6 +279,69 @@ const styles = StyleSheet.create({
   contentInput: {
     minHeight: 200,
     textAlignVertical: 'top',
+  },
+  modeSwitch: {
+    marginBottom: spacing.md,
+  },
+  drawingContainer: {
+    marginBottom: spacing.md,
+  },
+  drawingToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  toolbarLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: spacing.xs,
+  },
+  colorPicker: {
+    flexDirection: 'row',
+    flex: 1,
+    gap: spacing.xs,
+  },
+  colorButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectedColor: {
+    borderColor: '#000000',
+    borderWidth: 3,
+  },
+  clearButton: {
+    marginLeft: spacing.sm,
+  },
+  canvas: {
+    height: 300,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: theme.colors.primary + '30',
+    borderStyle: 'dashed',
+    overflow: 'hidden',
+  },
+  canvasPlaceholder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  canvasPlaceholderText: {
+    marginTop: spacing.sm,
+    color: theme.colors.placeholder,
+    fontSize: 16,
   },
   section: {
     marginBottom: spacing.md,
