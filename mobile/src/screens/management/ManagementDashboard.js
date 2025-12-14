@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card, Text } from 'react-native-paper';
+import { Card, Text, Chip } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { fetchSessions } from '../../redux/slices/sessionSlice';
@@ -9,47 +9,55 @@ import { spacing, theme } from '../../constants/theme';
 
 const ManagementDashboard = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { sessions = [] } = useSelector((state) => state.sessions || {});
+  const { user } = useSelector((state) => state.auth || {});
+  const sessions = useSelector((state) => state.sessions?.sessions || []);
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await dispatch(fetchSessions());
+    try {
+      await dispatch(fetchSessions());
+    } catch (error) {
+      console.log('Error fetching sessions:', error);
+    }
     setRefreshing(false);
   }, [dispatch]);
 
   useEffect(() => {
     onRefresh();
-  }, []);
+  }, [onRefresh]);
 
-  const stats = [
+  const stats = React.useMemo(() => [
     {
       label: 'Total Sessions',
-      value: sessions?.length || 0,
+      value: Array.isArray(sessions) ? sessions.length : 0,
       icon: 'calendar-check',
       color: '#2196F3',
     },
     {
       label: 'High Severity',
-      value: sessions?.filter((s) => s.severity === 'high').length || 0,
+      value: Array.isArray(sessions) ? sessions.filter((s) => s?.severity === 'high').length : 0,
       icon: 'alert-circle',
       color: '#F44336',
     },
     {
       label: 'This Month',
-      value:
-        sessions?.filter((s) => {
-          const sessionDate = new Date(s.date);
+      value: Array.isArray(sessions) ? sessions.filter((s) => {
+        try {
+          const sessionDate = new Date(s?.date);
           const now = new Date();
           return (
             sessionDate.getMonth() === now.getMonth() &&
             sessionDate.getFullYear() === now.getFullYear()
           );
-        }).length || 0,
+        } catch {
+          return false;
+        }
+      }).length : 0,
       icon: 'calendar-month',
       color: '#4CAF50',
     },
-  ];
+  ], [sessions]);
 
   const analytics = [
     {
@@ -81,11 +89,31 @@ const ManagementDashboard = ({ navigation }) => {
         style={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Analytics Dashboard</Text>
-          <Text style={styles.subtitle}>Privacy-first insights</Text>
-        </View>
+        {/* Welcome Card */}
+        <Card style={styles.welcomeCard}>
+          <Card.Content>
+            <View style={styles.welcomeHeader}>
+              <View style={styles.welcomeTextContainer}>
+                <Text style={styles.welcomeEmoji}>📊</Text>
+                <View>
+                  <Text style={styles.welcomeGreeting}>Welcome,</Text>
+                  <Text style={styles.welcomeName}>{user?.name || 'Manager'}!</Text>
+                </View>
+              </View>
+              <Chip
+                icon="shield-check"
+                mode="flat"
+                style={{ backgroundColor: '#6200EE20' }}
+                textStyle={{ color: '#6200EE' }}
+              >
+                Management
+              </Chip>
+            </View>
+            <Text style={styles.welcomeSubtitle}>Privacy-first insights and analytics</Text>
+          </Card.Content>
+        </Card>
 
+        {/* Stats */}
         <View style={styles.stats}>
           {stats.map((stat, index) => (
             <Card key={index} style={styles.statCard}>
@@ -98,6 +126,7 @@ const ManagementDashboard = ({ navigation }) => {
           ))}
         </View>
 
+        {/* Analytics */}
         <Text style={styles.sectionTitle}>Analytics Reports</Text>
         {analytics.map((item, index) => (
           <TouchableOpacity key={index} onPress={() => navigation.navigate(item.screen)}>
@@ -123,30 +152,61 @@ const ManagementDashboard = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#F5F5F5',
   },
   container: {
     flex: 1,
   },
-  header: {
-    padding: spacing.lg,
+  welcomeCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    overflow: 'hidden',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  welcomeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
-  subtitle: {
+  welcomeTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  welcomeEmoji: {
+    fontSize: 32,
+    marginRight: spacing.sm,
+  },
+  welcomeGreeting: {
     fontSize: 14,
-    color: theme.colors.placeholder,
+    color: '#666',
+    fontWeight: '500',
+  },
+  welcomeName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#6200EE',
+    marginTop: 2,
+  },
+  welcomeSubtitle: {
+    fontSize: 14,
+    color: '#666',
     marginTop: spacing.xs,
   },
   stats: {
     flexDirection: 'row',
     paddingHorizontal: spacing.md,
-    gap: spacing.sm,
   },
   statCard: {
     flex: 1,
+    marginHorizontal: spacing.xs,
   },
   statContent: {
     alignItems: 'center',
@@ -159,7 +219,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: theme.colors.placeholder,
+    color: '#666',
     marginTop: spacing.xs,
     textAlign: 'center',
   },
@@ -195,7 +255,7 @@ const styles = StyleSheet.create({
   },
   analyticsSubtitle: {
     fontSize: 14,
-    color: theme.colors.placeholder,
+    color: '#666',
     marginTop: 2,
   },
 });
