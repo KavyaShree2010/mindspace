@@ -14,23 +14,23 @@ const Stack = createStackNavigator();
 
 const HomeStack = () => (
   <Stack.Navigator>
-    <Stack.Screen 
-      name="Dashboard" 
+    <Stack.Screen
+      name="Dashboard"
       component={ManagementDashboard}
-      options={{ title: 'Analytics Dashboard' }}
+      options={{ headerShown: false }}
     />
-    <Stack.Screen 
-      name="DepartmentAnalytics" 
+    <Stack.Screen
+      name="DepartmentAnalytics"
       component={DepartmentAnalyticsScreen}
       options={{ title: 'Department Analytics' }}
     />
-    <Stack.Screen 
-      name="YearAnalytics" 
+    <Stack.Screen
+      name="YearAnalytics"
       component={YearAnalyticsScreen}
       options={{ title: 'Year Analytics' }}
     />
-    <Stack.Screen 
-      name="SeverityAnalytics" 
+    <Stack.Screen
+      name="SeverityAnalytics"
       component={SeverityAnalyticsScreen}
       options={{ title: 'Severity Analytics' }}
     />
