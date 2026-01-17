@@ -136,113 +136,88 @@ const CounsellorDashboard = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-        <ScrollView
-          style={styles.container}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          {/* Welcome Card */}
-          <Card style={styles.welcomeCard}>
-            <Card.Content>
-              <View style={styles.welcomeHeader}>
-                <View style={styles.welcomeTextContainer}>
-                  <Text style={styles.welcomeEmoji}>😊</Text>
-                  <View>
-                    <Text style={styles.welcomeGreeting}>Welcome back,</Text>
-                    <Text style={styles.welcomeName}>{user?.name || 'Counsellor'}!</Text>
-                  </View>
-                </View>
-                <Chip
-                  icon={user?.isActive ? 'circle' : 'circle-outline'}
-                  mode="flat"
-                  style={{
-                    backgroundColor: user?.isActive ? '#FF980020' : '#4CAF5020',
-                  }}
-                  textStyle={{
-                    color: user?.isActive ? '#FF9800' : '#4CAF50',
-                  }}
-                >
-                  {user?.isActive ? 'In Session' : 'Available'}
-                </Chip>
-              </View>
-              <Text style={styles.dailyQuote}>{dailyQuote}</Text>
-            </Card.Content>
-          </Card>
-
-          {/* Check-In Card */}
-          {!checkedIn ? (
-            <Card style={[styles.card, styles.checkInCard]}>
-              <Card.Content style={styles.checkInContent}>
-                <Icon name="clock-check-outline" size={48} color={theme.colors.primary} />
-                <Text style={styles.checkInTitle}>Daily Check-In Required</Text>
-                <Text style={styles.checkInSubtitle}>
-                  Mark yourself available for today's sessions
-                </Text>
-                <Button
-                  mode="contained"
-                  onPress={handleCheckIn}
-                  icon="login"
-                  style={styles.checkInButton}
-                  contentStyle={styles.buttonContent}
-                >
-                  Check In Now
-                </Button>
-              </Card.Content>
-            </Card>
-          ) : (
-            <Card style={[styles.card, styles.checkedInCard]}>
-              <Card.Content style={styles.checkedInContent}>
-                <Icon name="check-circle" size={32} color="#4CAF50" />
-                <View style={styles.checkedInText}>
-                  <Text style={styles.checkedInTitle}>✓ Checked In</Text>
-                  <Text style={styles.checkedInTime}>Since {checkInTime}</Text>
-                </View>
-                <Button
-                  mode="outlined"
-                  onPress={async () => {
-                    try {
-                      await AsyncStorage.removeItem('checkInDate');
-                      await AsyncStorage.removeItem('checkInTime');
-                      setCheckedIn(false);
-                      setCheckInTime('');
-                      Alert.alert('✓ Checked Out', 'You have been marked as unavailable');
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to check out');
-                    }
-                  }}
-                  icon="logout"
-                  style={styles.checkOutButton}
-                >
-                  Check Out
-                </Button>
-              </Card.Content>
-            </Card>
-          )}
-
-          {/* Stats */}
-          <View style={styles.stats}>
-            {stats.map((stat, index) => (
-              <Card key={index} style={styles.statCard}>
-                <Card.Content style={styles.statContent}>
-                  <Icon name={stat.icon} size={24} color={stat.color} />
-                  <Text style={styles.statValue}>{stat.value}</Text>
-                  <Text style={styles.statLabel}>{stat.label}</Text>
-                </Card.Content>
-              </Card>
-            ))}
+      <ScrollView
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.greeting}>Welcome back,</Text>
+            <Text style={styles.name}>{user?.name || 'Counsellor'}</Text>
           </View>
+          <View style={styles.statusBadge}>
+            <View style={[styles.statusDot, { backgroundColor: user?.isActive ? '#FF9800' : '#4CAF50' }]} />
+            <Text style={styles.statusText}>{user?.isActive ? 'In Session' : 'Available'}</Text>
+          </View>
+        </View>
 
-          {/* Quick Actions */}
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actions}>
+        {/* Daily Quote */}
+        <View style={styles.quoteContainer}>
+          <Text style={styles.dailyQuote}>{dailyQuote}</Text>
+        </View>
+
+        {/* Check-In Section */}
+        {!checkedIn ? (
+          <View style={styles.checkInSection}>
+            <View style={styles.checkInHeader}>
+              <Icon name="clock-check-outline" size={24} color="#F5A962" />
+              <Text style={styles.checkInTitle}>Daily Check-In Required</Text>
+            </View>
+            <Text style={styles.checkInSubtitle}>
+              Mark yourself available for today's sessions
+            </Text>
+            <TouchableOpacity style={styles.checkInButton} onPress={handleCheckIn}>
+              <Text style={styles.checkInButtonText}>Check In Now</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.checkedInSection}>
+            <Icon name="check-circle" size={24} color="#4CAF50" />
+            <View style={styles.checkedInInfo}>
+              <Text style={styles.checkedInTitle}>Checked In</Text>
+              <Text style={styles.checkedInTime}>Since {checkInTime}</Text>
+            </View>
             <TouchableOpacity
-              style={styles.actionCard}
+              style={styles.checkOutButton}
+              onPress={async () => {
+                try {
+                  await AsyncStorage.removeItem('checkInDate');
+                  await AsyncStorage.removeItem('checkInTime');
+                  setCheckedIn(false);
+                  setCheckInTime('');
+                  Alert.alert('✓ Checked Out', 'You have been marked as unavailable');
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to check out');
+                }
+              }}
+            >
+              <Text style={styles.checkOutButtonText}>Check Out</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          {stats.map((stat, index) => (
+            <View key={index} style={styles.statCard}>
+              <Icon name={stat.icon} size={24} color={stat.color} />
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsGrid}>
+            <TouchableOpacity
+              style={[styles.actionCard, (!checkedIn && !user?.isActive) && styles.actionCardDisabled]}
               onPress={() => {
                 if (user?.isActive) {
-                  // End Session - scan student QR to verify
                   navigation.navigate('QRScanner', { mode: 'checkout', sessionId: user?.currentSessionId });
                 } else {
-                  // Start Session - scan student QR
                   if (!checkedIn) {
                     Alert.alert('Daily Check-In Required', 'Please check in for the day before starting a session');
                     return;
@@ -254,8 +229,8 @@ const CounsellorDashboard = ({ navigation }) => {
             >
               <Icon
                 name={user?.isActive ? "qrcode-remove" : "qrcode-scan"}
-                size={40}
-                color={user?.isActive ? '#FF5722' : (checkedIn ? theme.colors.primary : theme.colors.disabled)}
+                size={32}
+                color={user?.isActive ? '#FF5722' : (checkedIn ? '#F5A962' : '#CCCCCC')}
               />
               <Text style={[styles.actionText, (!checkedIn && !user?.isActive) && styles.actionTextDisabled]}>
                 {user?.isActive ? 'End Session' : 'Start Session'}
@@ -266,7 +241,7 @@ const CounsellorDashboard = ({ navigation }) => {
               style={styles.actionCard}
               onPress={() => navigation.navigate('Appointments')}
             >
-              <Icon name="calendar-clock" size={40} color={theme.colors.secondary} />
+              <Icon name="calendar-clock" size={32} color="#5B9BD5" />
               <Text style={styles.actionText}>Appointments</Text>
             </TouchableOpacity>
 
@@ -274,7 +249,7 @@ const CounsellorDashboard = ({ navigation }) => {
               style={styles.actionCard}
               onPress={() => navigation.navigate('Availability')}
             >
-              <Icon name="calendar-plus" size={40} color={theme.colors.success} />
+              <Icon name="calendar-plus" size={32} color="#4CAF50" />
               <Text style={styles.actionText}>Manage Slots</Text>
             </TouchableOpacity>
 
@@ -282,42 +257,44 @@ const CounsellorDashboard = ({ navigation }) => {
               style={styles.actionCard}
               onPress={() => navigation.navigate('StudentHistory')}
             >
-              <Icon name="history" size={40} color={theme.colors.info} />
+              <Icon name="history" size={32} color="#B8A8D8" />
               <Text style={styles.actionText}>History</Text>
             </TouchableOpacity>
           </View>
+        </View>
 
-          {/* Today's Appointments */}
+        {/* Today's Appointments */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Today's Appointments</Text>
           {todayAppointments.length === 0 ? (
-            <Card style={styles.card}>
-              <Card.Content style={styles.emptyCard}>
-                <Icon name="calendar-blank" size={48} color={theme.colors.disabled} />
-                <Text style={styles.emptyText}>No appointments scheduled for today</Text>
-              </Card.Content>
-            </Card>
+            <View style={styles.emptyState}>
+              <Icon name="calendar-blank" size={48} color="#CCCCCC" />
+              <Text style={styles.emptyText}>No appointments scheduled for today</Text>
+            </View>
           ) : (
             todayAppointments.map((apt) => (
-              <Card key={apt._id} style={styles.card}>
-                <Card.Content>
-                  <View style={styles.aptHeader}>
-                    <View style={styles.aptInfo}>
-                      <Text style={styles.aptStudent}>
-                        {apt.student?.anonymousUsername || 'Student'}
-                      </Text>
-                      <Text style={styles.aptTime}>{apt.time}</Text>
-                    </View>
-                    <Chip mode="outlined">{apt.type}</Chip>
+              <View key={apt._id} style={styles.appointmentCard}>
+                <View style={styles.appointmentHeader}>
+                  <View style={styles.appointmentInfo}>
+                    <Text style={styles.appointmentStudent}>
+                      {apt.student?.anonymousUsername || 'Student'}
+                    </Text>
+                    <Text style={styles.appointmentTime}>{apt.time}</Text>
                   </View>
-                  <Text style={styles.aptReason} numberOfLines={2}>
-                    {apt.reason}
-                  </Text>
-                </Card.Content>
-              </Card>
+                  <View style={styles.appointmentBadge}>
+                    <Text style={styles.appointmentType}>{apt.type}</Text>
+                  </View>
+                </View>
+                <Text style={styles.appointmentReason} numberOfLines={2}>
+                  {apt.reason}
+                </Text>
+              </View>
             ))
           )}
-        </ScrollView>
-      </Animated.View>
+        </View>
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -325,218 +302,276 @@ const CounsellorDashboard = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  headerLeft: {
+    flex: 1,
   },
   greeting: {
-    fontSize: 16,
-    color: theme.colors.placeholder,
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '400',
+    letterSpacing: 0.25,
   },
   name: {
     fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: spacing.xs,
+    fontWeight: '600',
+    color: '#000000',
+    marginTop: 4,
+    letterSpacing: 0.15,
   },
-  stats: {
+  statusBadge: {
     flexDirection: 'row',
-    padding: spacing.md,
-    paddingTop: 0,
-    gap: spacing.md,
-  },
-  statCard: {
-    flex: 1,
-  },
-  statContent: {
     alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 20,
+    gap: spacing.xs,
   },
-  statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginTop: spacing.xs,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  statLabel: {
+  statusText: {
     fontSize: 12,
-    color: theme.colors.placeholder,
-    marginTop: spacing.xs,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    marginBottom: spacing.md,
-  },
-  welcomeCard: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    overflow: 'hidden',
-  },
-  welcomeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  welcomeTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  welcomeEmoji: {
-    fontSize: 32,
-  },
-  welcomeGreeting: {
-    fontSize: 14,
-    color: theme.colors.placeholder,
+    color: '#666666',
     fontWeight: '500',
   },
-  welcomeName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    marginTop: 2,
+  quoteContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: '#FFF4EC',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderRadius: 12,
   },
   dailyQuote: {
     fontSize: 15,
     fontStyle: 'italic',
-    color: '#555',
+    color: '#555555',
     lineHeight: 22,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    fontWeight: '400',
   },
-  actions: {
+  checkInSection: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: '#FFF4EC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F5A962',
+  },
+  checkInHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  checkInTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    letterSpacing: 0.15,
+  },
+  checkInSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: spacing.md,
+    fontWeight: '400',
+  },
+  checkInButton: {
+    backgroundColor: '#F5A962',
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  checkInButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  checkedInSection: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    backgroundColor: '#F1F8F4',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  checkedInInfo: {
+    flex: 1,
+  },
+  checkedInTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  checkedInTime: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 2,
+    fontWeight: '400',
+  },
+  checkOutButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+  },
+  checkOutButtonText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    gap: spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    minHeight: 100,
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#000000',
+    marginTop: spacing.sm,
+    letterSpacing: -0.5,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: spacing.xs,
+    fontWeight: '400',
+  },
+  section: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: spacing.md,
+    letterSpacing: 0.15,
+  },
+  actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: spacing.md,
     gap: spacing.md,
   },
   actionCard: {
     width: '47%',
-    aspectRatio: 1,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    justifyContent: 'center',
+    padding: spacing.lg,
     alignItems: 'center',
-    elevation: 2,
-    padding: spacing.md,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    minHeight: 110,
+  },
+  actionCardDisabled: {
+    opacity: 0.5,
   },
   actionText: {
     marginTop: spacing.sm,
     fontSize: 14,
     fontWeight: '500',
+    color: '#000000',
     textAlign: 'center',
   },
   actionTextDisabled: {
-    color: theme.colors.disabled,
+    color: '#CCCCCC',
   },
-  checkInCard: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    backgroundColor: theme.colors.primaryContainer,
-  },
-  checkInContent: {
+  emptyState: {
     alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  checkInTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  checkInSubtitle: {
-    fontSize: 14,
-    color: theme.colors.placeholder,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  checkInButton: {
-    minWidth: 200,
-  },
-  checkOutButton: {
-    marginLeft: 'auto',
-  },
-  buttonContent: {
-    paddingVertical: spacing.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkedInCard: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    backgroundColor: '#4CAF5010',
-  },
-  checkedInContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  checkedInText: {
-    marginLeft: spacing.md,
-    flex: 1,
-  },
-  checkedInTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  checkedInTime: {
-    fontSize: 12,
-    color: theme.colors.placeholder,
-    marginTop: 2,
-  },
-  card: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    padding: spacing.lg,
+    padding: spacing.xl,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
   emptyText: {
     marginTop: spacing.md,
-    color: theme.colors.placeholder,
+    color: '#999999',
+    fontSize: 14,
+    fontWeight: '400',
   },
-  aptHeader: {
+  appointmentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  appointmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
-  aptInfo: {
+  appointmentInfo: {
     flex: 1,
   },
-  aptStudent: {
+  appointmentStudent: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#000000',
   },
-  aptTime: {
+  appointmentTime: {
     fontSize: 14,
-    color: theme.colors.primary,
-    marginTop: 2,
+    color: '#F5A962',
+    marginTop: 4,
+    fontWeight: '500',
   },
-  aptReason: {
+  appointmentBadge: {
+    backgroundColor: '#F3F0FF',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 20,
+  },
+  appointmentType: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  appointmentReason: {
     fontSize: 14,
-    color: theme.colors.placeholder,
-    marginTop: spacing.xs,
+    color: '#666666',
+    lineHeight: 20,
+    fontWeight: '400',
   },
 });
 
