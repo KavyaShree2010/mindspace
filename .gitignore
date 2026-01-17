@@ -1,0 +1,28 @@
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Build outputs (if any shared)
+dist/
+build/
+
+# Environment files (if not already covered)
+.env
+.env.local
+.env.development
+.env.test
+.env.production

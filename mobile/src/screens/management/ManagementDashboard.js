@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card, Text, Chip } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { fetchSessions } from '../../redux/slices/sessionSlice';
-import { spacing, theme } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
 
 const ManagementDashboard = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -27,59 +27,43 @@ const ManagementDashboard = ({ navigation }) => {
     onRefresh();
   }, [onRefresh]);
 
-  const stats = React.useMemo(() => [
-    {
-      label: 'Total Sessions',
-      value: Array.isArray(sessions) ? sessions.length : 0,
-      icon: 'calendar-check',
-      color: '#2196F3',
-    },
-    {
-      label: 'High Severity',
-      value: Array.isArray(sessions) ? sessions.filter((s) => s?.severity === 'high').length : 0,
-      icon: 'alert-circle',
-      color: '#F44336',
-    },
-    {
-      label: 'This Month',
-      value: Array.isArray(sessions) ? sessions.filter((s) => {
-        try {
-          const sessionDate = new Date(s?.date);
-          const now = new Date();
-          return (
-            sessionDate.getMonth() === now.getMonth() &&
-            sessionDate.getFullYear() === now.getFullYear()
-          );
-        } catch {
-          return false;
-        }
-      }).length : 0,
-      icon: 'calendar-month',
-      color: '#4CAF50',
-    },
-  ], [sessions]);
+  // Calculate statistics
+  const totalSessions = Array.isArray(sessions) ? sessions.length : 0;
+  const avgSeverity = React.useMemo(() => {
+    if (!Array.isArray(sessions) || sessions.length === 0) return 0;
+    const severityMap = { low: 1, medium: 3, high: 5 };
+    const total = sessions.reduce((sum, s) => sum + (severityMap[s?.severity] || 0), 0);
+    return (total / sessions.length).toFixed(1);
+  }, [sessions]);
+
+  // Group sessions by counsellor
+  const counsellorSessions = React.useMemo(() => {
+    if (!Array.isArray(sessions)) return [];
+    const grouped = sessions.reduce((acc, session) => {
+      const name = session?.counsellor_name || 'Unknown';
+      acc[name] = (acc[name] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(grouped)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  }, [sessions]);
+
+  const maxCounsellorSessions = Math.max(...counsellorSessions.map(c => c.count), 1);
 
   const analytics = [
     {
       title: 'Department Analytics',
-      subtitle: 'View session distribution by department',
-      icon: 'office-building',
+      subtitle: 'View session breakdown by academic department.',
+      icon: 'chart-bar',
       screen: 'DepartmentAnalytics',
-      color: '#2196F3',
     },
     {
-      title: 'Year Analytics',
-      subtitle: 'Analyze data by academic year',
-      icon: 'school',
-      screen: 'YearAnalytics',
-      color: '#4CAF50',
-    },
-    {
-      title: 'Severity Analysis',
-      subtitle: 'Track severity trends',
-      icon: 'chart-line',
+      title: 'Severity Analytics',
+      subtitle: 'Analyze session data based on severity levels (coming soon).',
+      icon: 'flask-outline',
       screen: 'SeverityAnalytics',
-      color: '#FF9800',
     },
   ];
 
@@ -89,61 +73,74 @@ const ManagementDashboard = ({ navigation }) => {
         style={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Welcome Card */}
-        <Card style={styles.welcomeCard}>
-          <Card.Content>
-            <View style={styles.welcomeHeader}>
-              <View style={styles.welcomeTextContainer}>
-                <Text style={styles.welcomeEmoji}>📊</Text>
-                <View>
-                  <Text style={styles.welcomeGreeting}>Welcome,</Text>
-                  <Text style={styles.welcomeName}>{user?.name || 'Manager'}!</Text>
-                </View>
-              </View>
-              <Chip
-                icon="shield-check"
-                mode="flat"
-                style={{ backgroundColor: '#6200EE20' }}
-                textStyle={{ color: '#6200EE' }}
-              >
-                Management
-              </Chip>
-            </View>
-            <Text style={styles.welcomeSubtitle}>Privacy-first insights and analytics</Text>
-          </Card.Content>
-        </Card>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.iconCircle}>
+            <Icon name="brain" size={28} color="#FFFFFF" />
+          </View>
+          <Text style={styles.headerTitle}>Welcome Management</Text>
+        </View>
 
-        {/* Stats */}
-        <View style={styles.stats}>
-          {stats.map((stat, index) => (
-            <Card key={index} style={styles.statCard}>
-              <Card.Content style={styles.statContent}>
-                <Icon name={stat.icon} size={32} color={stat.color} />
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </Card.Content>
-            </Card>
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
+          {/* Total Sessions */}
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Total Sessions</Text>
+            <Text style={styles.statValue}>{totalSessions.toLocaleString()}</Text>
+            <View style={styles.statChange}>
+              <Icon name="arrow-up" size={14} color="#4CAF50" />
+              <Text style={styles.statChangeText}>+5% this month</Text>
+            </View>
+          </View>
+
+          {/* Avg Severity */}
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Avg. Severity</Text>
+            <Text style={styles.statValue}>{avgSeverity}</Text>
+            <View style={styles.statChange}>
+              <Icon name="arrow-up" size={14} color="#F44336" />
+              <Text style={[styles.statChangeText, { color: '#F44336' }]}>+0.1 (increase)</Text>
+            </View>
+            <Text style={styles.statSubtext}>On a scale of 1-5</Text>
+          </View>
+        </View>
+
+        {/* Sessions by Counsellor */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sessions by Counsellor</Text>
+          {counsellorSessions.map((counsellor, index) => (
+            <View key={index} style={styles.counsellorRow}>
+              <Text style={styles.counsellorName}>{counsellor.name}</Text>
+              <View style={styles.barContainer}>
+                <View
+                  style={[
+                    styles.bar,
+                    { width: `${(counsellor.count / maxCounsellorSessions) * 60}%` }
+                  ]}
+                />
+              </View>
+              <Text style={styles.counsellorCount}>{counsellor.count}</Text>
+            </View>
           ))}
         </View>
 
-        {/* Analytics */}
-        <Text style={styles.sectionTitle}>Analytics Reports</Text>
-        {analytics.map((item, index) => (
-          <TouchableOpacity key={index} onPress={() => navigation.navigate(item.screen)}>
-            <Card style={styles.analyticsCard}>
-              <Card.Content style={styles.analyticsContent}>
-                <View style={[styles.iconCircle, { backgroundColor: item.color + '20' }]}>
-                  <Icon name={item.icon} size={28} color={item.color} />
-                </View>
-                <View style={styles.analyticsText}>
+        {/* Analytics Reports */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Analytics Reports</Text>
+          {analytics.map((item, index) => (
+            <TouchableOpacity key={index} onPress={() => navigation.navigate(item.screen)}>
+              <View style={styles.analyticsCard}>
+                <View style={styles.analyticsContent}>
                   <Text style={styles.analyticsTitle}>{item.title}</Text>
                   <Text style={styles.analyticsSubtitle}>{item.subtitle}</Text>
                 </View>
-                <Icon name="chevron-right" size={24} color={theme.colors.disabled} />
-              </Card.Content>
-            </Card>
-          </TouchableOpacity>
-        ))}
+                <Icon name={item.icon} size={32} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -152,111 +149,154 @@ const ManagementDashboard = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
-  },
-  welcomeCard: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
     backgroundColor: '#FFFFFF',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#5B9BD5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    letterSpacing: 0.15,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    gap: spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFF4EC',
+    borderRadius: 12,
+    padding: spacing.md,
+    minHeight: 120,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: spacing.xs,
+    fontWeight: '400',
+    letterSpacing: 0.25,
+  },
+  statValue: {
+    fontSize: 36,
+    fontWeight: '600',
+    color: '#F5A962',
+    marginBottom: spacing.xs,
+    letterSpacing: -0.5,
+  },
+  statChange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  statChangeText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginLeft: 4,
+    fontWeight: '400',
+  },
+  statSubtext: {
+    fontSize: 12,
+    color: '#999999',
+    marginTop: 2,
+    fontWeight: '400',
+  },
+  section: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: spacing.md,
+    letterSpacing: 0.15,
+  },
+  counsellorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  counsellorName: {
+    fontSize: 16,
+    color: '#000000',
+    width: 140,
+    fontWeight: '400',
+  },
+  barContainer: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#FFE8D6',
+    borderRadius: 4,
+    marginHorizontal: spacing.sm,
+    overflow: 'hidden',
+  },
+  bar: {
+    height: '100%',
+    backgroundColor: '#F5A962',
+    borderRadius: 4,
+  },
+  counsellorCount: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    width: 32,
+    textAlign: 'right',
+  },
+  analyticsCard: {
+    backgroundColor: '#F5A962',
     borderRadius: 16,
-    elevation: 4,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 100,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    overflow: 'hidden',
-  },
-  welcomeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  welcomeTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  welcomeEmoji: {
-    fontSize: 32,
-    marginRight: spacing.sm,
-  },
-  welcomeGreeting: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  welcomeName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#6200EE',
-    marginTop: 2,
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: spacing.xs,
-  },
-  stats: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.md,
-  },
-  statCard: {
-    flex: 1,
-    marginHorizontal: spacing.xs,
-  },
-  statContent: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  statValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginTop: spacing.sm,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: spacing.xs,
-    textAlign: 'center',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
-    marginBottom: spacing.md,
-  },
-  analyticsCard: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    elevation: 3,
   },
   analyticsContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  analyticsText: {
     flex: 1,
-    marginLeft: spacing.md,
+    paddingRight: spacing.md,
   },
   analyticsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: spacing.xs,
+    letterSpacing: 0.15,
   },
   analyticsSubtitle: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 2,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    lineHeight: 20,
+    fontWeight: '400',
   },
 });
 

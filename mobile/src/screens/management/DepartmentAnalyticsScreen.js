@@ -1,16 +1,17 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Animated } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, Card } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { fetchSessions } from '../../redux/slices/sessionSlice';
-import { spacing, theme } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
 
-const DepartmentAnalyticsScreen = () => {
+const DepartmentAnalyticsScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const sessions = useSelector((state) => state.sessions?.sessions || []);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [selectedYear, setSelectedYear] = useState('II');
+  const [selectedDepartment, setSelectedDepartment] = useState('All');
 
   useEffect(() => {
     const loadSessions = async () => {
@@ -21,88 +22,131 @@ const DepartmentAnalyticsScreen = () => {
       }
     };
     loadSessions();
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
   }, [dispatch]);
 
   // Group sessions by department
-  const departmentData = (Array.isArray(sessions) ? sessions : []).reduce((acc, session) => {
-    const dept = session?.student?.department || 'Unknown';
-    if (!acc[dept]) {
-      acc[dept] = { total: 0, high: 0, moderate: 0, low: 0 };
-    }
-    acc[dept].total++;
-    if (session.severity === 'high') acc[dept].high++;
-    else if (session.severity === 'moderate') acc[dept].moderate++;
-    else if (session.severity === 'low') acc[dept].low++;
-    return acc;
-  }, {});
+  const departmentData = React.useMemo(() => {
+    const data = {};
+    const deptOrder = ['CSE', 'ECE', 'MECH', 'CIVIL', 'MBA'];
 
-  const departments = Object.keys(departmentData).map((dept) => ({
-    name: dept,
-    ...departmentData[dept],
-  }));
+    (Array.isArray(sessions) ? sessions : []).forEach((session) => {
+      const dept = session?.student?.department || 'Unknown';
+      if (!data[dept]) {
+        data[dept] = 0;
+      }
+      data[dept]++;
+    });
 
-  const maxSessions = Math.max(...departments.map((d) => d.total), 1);
+    return deptOrder
+      .filter(dept => data[dept])
+      .map(dept => ({
+        name: dept,
+        count: data[dept] || 0,
+      }));
+  }, [sessions]);
+
+  const totalSessions = departmentData.reduce((sum, d) => sum + d.count, 0);
+  const highestDept = departmentData.length > 0
+    ? departmentData.reduce((max, d) => d.count > max.count ? d : max, departmentData[0])
+    : null;
+  const lowestDept = departmentData.length > 0
+    ? departmentData.reduce((min, d) => d.count < min.count ? d : min, departmentData[0])
+    : null;
+
+  const maxCount = Math.max(...departmentData.map(d => d.count), 1);
+  const chartHeight = 300;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <ScrollView style={styles.container}>
-          <View style={styles.header}>
-            <Icon name="office-building" size={40} color={theme.colors.primary} />
-            <Text style={styles.title}>Department Analytics</Text>
-            <Text style={styles.subtitle}>Session distribution by department</Text>
-          </View>
+      <ScrollView style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="chevron-left" size={28} color="#000000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Department Analytics</Text>
+          <TouchableOpacity style={styles.menuButton}>
+            <Icon name="menu" size={24} color="#000000" />
+          </TouchableOpacity>
+        </View>
 
-          {departments.length === 0 ? (
-            <Card style={styles.card}>
-              <Card.Content style={styles.emptyState}>
-                <Icon name="chart-bar" size={64} color={theme.colors.disabled} />
-                <Text style={styles.emptyText}>No data available</Text>
-              </Card.Content>
-            </Card>
-          ) : (
-            departments.map((dept, index) => (
-              <Card key={index} style={styles.card}>
-                <Card.Content>
-                  <View style={styles.deptHeader}>
-                    <Text style={styles.deptName}>{dept.name}</Text>
-                    <Text style={styles.deptTotal}>{dept.total} sessions</Text>
-                  </View>
+        {/* Filters */}
+        <View style={styles.filterContainer}>
+          <TouchableOpacity style={styles.filterPill}>
+            <Text style={styles.filterText}>Year: {selectedYear}</Text>
+            <Icon name="chevron-down" size={16} color="#666666" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.filterPill}>
+            <Text style={styles.filterText}>Department: {selectedDepartment}</Text>
+            <Icon name="chevron-down" size={16} color="#666666" />
+          </TouchableOpacity>
+        </View>
 
-                  <View style={styles.barContainer}>
+        {/* Chart */}
+        <View style={styles.chartSection}>
+          <Text style={styles.chartTitle}>Counselling Sessions by Department</Text>
+
+          <View style={styles.chart}>
+            {/* Y-axis labels */}
+            <View style={styles.yAxis}>
+              <Text style={styles.yAxisLabel}>200</Text>
+              <Text style={styles.yAxisLabel}>150</Text>
+              <Text style={styles.yAxisLabel}>100</Text>
+              <Text style={styles.yAxisLabel}>50</Text>
+              <Text style={styles.yAxisLabel}>0</Text>
+            </View>
+
+            {/* Bars */}
+            <View style={styles.barsContainer}>
+              {departmentData.map((dept, index) => (
+                <View key={index} style={styles.barWrapper}>
+                  <View style={styles.barColumn}>
                     <View
                       style={[
                         styles.bar,
-                        { width: `${(dept.total / maxSessions) * 100}%` },
+                        {
+                          height: (dept.count / maxCount) * (chartHeight - 40),
+                        }
                       ]}
                     />
                   </View>
+                  <Text style={styles.barLabel}>{dept.name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
 
-                  <View style={styles.severityBreakdown}>
-                    <View style={styles.severityItem}>
-                      <Icon name="circle" size={12} color="#F44336" />
-                      <Text style={styles.severityText}>{dept.high} High</Text>
-                    </View>
-                    <View style={styles.severityItem}>
-                      <Icon name="circle" size={12} color="#FF9800" />
-                      <Text style={styles.severityText}>{dept.moderate} Moderate</Text>
-                    </View>
-                    <View style={styles.severityItem}>
-                      <Icon name="circle" size={12} color="#4CAF50" />
-                      <Text style={styles.severityText}>{dept.low} Low</Text>
-                    </View>
-                  </View>
-                </Card.Content>
-              </Card>
-            ))
-          )}
-        </ScrollView>
-      </Animated.View>
+        {/* Stats Cards */}
+        <View style={styles.statsGrid}>
+          {/* Total Sessions */}
+          <View style={styles.statCardHalf}>
+            <Icon name="chart-bar" size={24} color="#B8A8D8" />
+            <Text style={styles.statLabel}>Total Sessions</Text>
+            <Text style={styles.statValue}>{totalSessions.toLocaleString()}</Text>
+          </View>
+
+          {/* Highest Utilized */}
+          <View style={styles.statCardHalf}>
+            <Icon name="trending-up" size={24} color="#B8A8D8" />
+            <Text style={styles.statLabel}>Highest Utilized Dept</Text>
+            <Text style={styles.statValue}>
+              {highestDept ? `${highestDept.name} (${highestDept.count})` : 'N/A'}
+            </Text>
+          </View>
+
+          {/* Lowest Utilized */}
+          <View style={styles.statCardFull}>
+            <Icon name="trending-down" size={24} color="#B8A8D8" />
+            <Text style={styles.statLabel}>Lowest Utilized Dept</Text>
+            <Text style={styles.statValue}>
+              {lowestDept ? `${lowestDept.name} (${lowestDept.count})` : 'N/A'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ height: 80 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -110,74 +154,152 @@ const DepartmentAnalyticsScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   header: {
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: spacing.sm,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: theme.colors.placeholder,
-    marginTop: spacing.xs,
-  },
-  card: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  deptHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  deptName: {
+  backButton: {
+    padding: spacing.xs,
+  },
+  headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-  },
-  deptTotal: {
-    fontSize: 16,
-    color: theme.colors.primary,
     fontWeight: '600',
+    color: '#000000',
+    flex: 1,
+    textAlign: 'center',
+    letterSpacing: 0.15,
   },
-  barContainer: {
-    height: 8,
-    backgroundColor: '#EEEEEE',
-    borderRadius: 4,
-    marginBottom: spacing.md,
+  menuButton: {
+    padding: spacing.xs,
   },
-  bar: {
-    height: '100%',
-    backgroundColor: theme.colors.primary,
-    borderRadius: 4,
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
   },
-  severityBreakdown: {
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F0FF',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    gap: spacing.xs,
+  },
+  filterText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '400',
+  },
+  chartSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  chartTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: spacing.lg,
+    letterSpacing: 0.15,
+  },
+  chart: {
+    flexDirection: 'row',
+    height: 320,
+    marginBottom: spacing.xl,
+  },
+  yAxis: {
+    width: 40,
+    justifyContent: 'space-between',
+    paddingRight: spacing.sm,
+    paddingTop: 10,
+    paddingBottom: 30,
+  },
+  yAxisLabel: {
+    fontSize: 12,
+    color: '#999999',
+    textAlign: 'right',
+  },
+  barsContainer: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    paddingBottom: 30,
   },
-  severityItem: {
-    flexDirection: 'row',
+  barWrapper: {
     alignItems: 'center',
+    flex: 1,
   },
-  severityText: {
-    marginLeft: spacing.xs,
+  barColumn: {
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    height: 260,
+  },
+  bar: {
+    width: '100%',
+    backgroundColor: '#F5A962',
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    minHeight: 4,
+  },
+  barLabel: {
     fontSize: 12,
+    color: '#000000',
+    marginTop: spacing.sm,
+    fontWeight: '400',
   },
-  emptyState: {
-    alignItems: 'center',
-    padding: spacing.xl,
+  statsGrid: {
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
-  emptyText: {
-    marginTop: spacing.md,
-    color: theme.colors.placeholder,
+  statCardHalf: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    minHeight: 120,
+  },
+  statCardFull: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    minHeight: 100,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666666',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    fontWeight: '400',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#000000',
+    letterSpacing: -0.5,
   },
 });
 
