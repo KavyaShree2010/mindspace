@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, Card, FAB, Chip, IconButton, Searchbar } from 'react-native-paper';
+import { Text, FAB } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { fetchJournals, deleteJournal } from '../../redux/slices/journalSlice';
@@ -36,69 +36,50 @@ const JournalListScreen = ({ navigation }) => {
     );
   };
 
-  const getMoodColor = (mood) => {
-    const colors = {
-      happy: '#4CAF50',
-      calm: '#2196F3',
-      anxious: '#FF9800',
-      sad: '#9E9E9E',
-      neutral: '#757575',
-    };
-    return colors[mood] || theme.colors.disabled;
-  };
-
   const renderJournal = ({ item }) => (
     <TouchableOpacity
       onPress={() => navigation.navigate('JournalEditor', { journal: item })}
+      style={styles.card}
     >
-      <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.header}>
-            <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-            <IconButton
-              icon="delete"
-              size={20}
-              onPress={() => handleDelete(item._id)}
-            />
-          </View>
-          <Text style={styles.content} numberOfLines={3}>{item.content}</Text>
-          <View style={styles.footer}>
-            <Text style={styles.date}>
-              {new Date(item.date).toLocaleDateString()}
-            </Text>
-            {item.mood && (
-              <Chip
-                mode="flat"
-                textStyle={{ color: getMoodColor(item.mood) }}
-                style={{ backgroundColor: getMoodColor(item.mood) + '20' }}
-              >
-                {item.mood}
-              </Chip>
-            )}
-          </View>
-          {item.tags && item.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              {item.tags.map((tag, index) => (
-                <Chip key={index} mode="outlined" compact style={styles.tag}>
-                  {tag}
-                </Chip>
-              ))}
-            </View>
-          )}
-        </Card.Content>
-      </Card>
+      <View style={styles.cardHeader}>
+        <Text style={styles.date}>
+          {new Date(item.date).toISOString().split('T')[0]}
+        </Text>
+        <TouchableOpacity onPress={() => navigation.navigate('JournalEditor', { journal: item })}>
+          <Icon name="square-edit-outline" size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
+      <Text style={styles.content} numberOfLines={2}>{item.content}</Text>
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        <Searchbar
-          placeholder="Search journals"
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          style={styles.searchbar}
-        />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="chevron-left" size={28} color="#000000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Journal</Text>
+          <TouchableOpacity>
+            <Icon name="filter-variant" size={24} color="#000000" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Icon name="magnify" size={20} color="#999999" style={styles.searchIcon} />
+          <TextInput
+            placeholder="Search journal entries..."
+            placeholderTextColor="#999999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
+          />
+        </View>
+
         <FlatList
           data={filteredJournals}
           renderItem={renderJournal}
@@ -106,7 +87,7 @@ const JournalListScreen = ({ navigation }) => {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Icon name="book-open-outline" size={64} color={theme.colors.disabled} />
+              <Icon name="book-open-outline" size={64} color="#CCCCCC" />
               <Text style={styles.emptyText}>No journal entries yet</Text>
               <Text style={styles.emptySubtext}>Start writing to track your thoughts</Text>
             </View>
@@ -115,6 +96,7 @@ const JournalListScreen = ({ navigation }) => {
         <FAB
           style={styles.fab}
           icon="plus"
+          color="#FFFFFF"
           onPress={() => navigation.navigate('JournalEditor')}
         />
       </View>
@@ -125,77 +107,105 @@ const JournalListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
-  },
-  searchbar: {
-    margin: spacing.md,
-  },
-  list: {
-    padding: spacing.md,
-    paddingTop: 0,
-  },
-  card: {
-    marginBottom: spacing.md,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  title: {
+  headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#000000',
+    letterSpacing: 0.3,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
     flex: 1,
-  },
-  content: {
     fontSize: 14,
-    color: theme.colors.text,
-    marginBottom: spacing.md,
-    lineHeight: 20,
+    color: '#000000',
+    padding: 0,
   },
-  footer: {
+  list: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  card: {
+    backgroundColor: '#FFF4EC',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 15,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: 12,
   },
   date: {
-    fontSize: 12,
-    color: theme.colors.placeholder,
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#999999',
+    letterSpacing: 0.2,
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: spacing.sm,
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+    letterSpacing: 0.3,
   },
-  tag: {
-    marginRight: spacing.xs,
-    marginBottom: spacing.xs,
+  content: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#666666',
+    lineHeight: 20,
+    letterSpacing: 0.2,
   },
   emptyContainer: {
     alignItems: 'center',
-    marginTop: spacing.xl * 2,
+    marginTop: 100,
   },
   emptyText: {
-    fontSize: 18,
-    color: theme.colors.disabled,
-    marginTop: spacing.md,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#999999',
+    marginTop: 15,
+    letterSpacing: 0.2,
   },
   emptySubtext: {
     fontSize: 14,
-    color: theme.colors.placeholder,
-    marginTop: spacing.xs,
+    fontWeight: '400',
+    color: '#CCCCCC',
+    marginTop: 8,
+    letterSpacing: 0.2,
   },
   fab: {
     position: 'absolute',
     margin: 16,
-    right: 0,
-    bottom: 0,
-    backgroundColor: theme.colors.primary,
+    right: 10,
+    bottom: 10,
+    backgroundColor: '#F5A962',
+    borderRadius: 30,
   },
 });
 

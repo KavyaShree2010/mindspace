@@ -13,3 +13,18 @@ web-build/
 .env
 .env.local
 .DS_Store
+
+# React Native specific
+android/app/build/
+android/build/
+ios/build/
+*.apk
+*.aab
+*.ipa
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
