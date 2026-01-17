@@ -136,7 +136,7 @@ const CounsellorDashboard = ({ navigation }) => {
           <View style={styles.scheduleCard}>
             <Text style={styles.scheduleTitle}>Today's Schedule</Text>
             <Icon name="calendar" size={40} color="#F09E54" style={styles.scheduleIcon} />
-            
+
             <Text style={styles.upcomingTitle}>
               {todayAppointments.length} Upcoming Sessions
             </Text>
@@ -173,14 +173,14 @@ const CounsellorDashboard = ({ navigation }) => {
           <View style={styles.pendingCard}>
             <Text style={styles.pendingTitle}>Pending Check-ins</Text>
             <Icon name="account-group" size={40} color="#FFFFFF" style={styles.pendingIcon} />
-            
+
             <Text style={styles.pendingCountText}>
               {pendingReviews.length} Students Awaiting Review
             </Text>
             <Text style={styles.pendingSubtext}>
               Quickly review and follow up on student mood logs.
             </Text>
-            
+
             <TouchableOpacity onPress={() => navigation.navigate('StudentHistory')}>
               <Text style={styles.reviewLink}>Review Check-ins</Text>
             </TouchableOpacity>
